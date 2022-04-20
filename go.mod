@@ -1,4 +1,4 @@
-module github.com/CbIPOKGIT/xormmodels
+module github.com/CbIPOKGIT/xorm-models
 
 go 1.18
 
