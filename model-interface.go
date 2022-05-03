@@ -5,13 +5,39 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-xorm/xorm"
 )
 
+// Primary key of each model
+type PK struct {
+	Id uint64 `xorm:"pk autoincr" json:"id"`
+}
+
+func (p PK) GetPKValue() uint64 {
+	return p.Id
+}
+
+// Timestamps
+type Timestamps struct {
+	CreatedAt time.Time `xorm:"created" json:"created_at"`
+	UpdatedAt time.Time `xorm:"updated" json:"updated_at"`
+}
+
+// Soft deletes
+type SoftDeletes struct {
+	DeletedAt time.Time `xorm:"deleted" json:"deleted_at"`
+}
+
 type ModelInterface interface {
 	GetConnection() (*xorm.Engine, error)
 	TableName() string
+}
+
+type ModelInterfaceWithPK interface {
+	ModelInterface
+	GetPKValue() uint64
 }
 
 func getPKValue(m ModelInterface) uint64 {
@@ -27,14 +53,14 @@ func getPKValue(m ModelInterface) uint64 {
 	return 0
 }
 
-func SaveModel(m ModelInterface) error {
+func SaveModel(m ModelInterfaceWithPK) error {
 	con, err := m.GetConnection()
 	if err != nil {
 		return err
 	}
-	defer con.Close()
+	// defer con.Close()
 
-	id := getPKValue(m)
+	id := m.GetPKValue()
 
 	var errDB error
 	if id != 0 {
@@ -54,7 +80,7 @@ func All(m ModelInterface) error {
 	if err != nil {
 		return err
 	}
-	defer con.Close()
+	// defer con.Close()
 
 	if err := con.Find(m); err != nil {
 		return err
@@ -67,7 +93,7 @@ func Find(m ModelInterface, id interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer con.Close()
+	// defer con.Close()
 
 	if f, err := con.ID(id).Get(m); err != nil {
 		return err
@@ -79,17 +105,14 @@ func Find(m ModelInterface, id interface{}) error {
 	return nil
 }
 
-func Delete(m ModelInterface) error {
-	id := getPKValue(m)
-	if id == 0 {
-		return errors.New("no id field")
-	}
+func Delete(m ModelInterfaceWithPK) error {
+	id := m.GetPKValue()
 
 	con, err := m.GetConnection()
 	if err != nil {
 		return err
 	}
-	defer con.Close()
+	// defer con.Close()
 
 	_, err = con.ID(id).Delete(m)
 	return err
@@ -100,23 +123,51 @@ func Insert(m ModelInterface) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer con.Close()
+	// defer con.Close()
 
 	return con.Insert(m)
 }
 
-func FindOne(m ModelInterface, mapa map[string]interface{}) (bool, error) {
+func FindOne(m ModelInterface, query *QueryModel) (bool, error) {
 	con, err := m.GetConnection()
 	if err != nil {
 		return false, err
 	}
-	defer con.Close()
 
-	query := con.NewSession()
+	session := con.NewSession()
+	queryFromModel(session, query)
 
-	for key, val := range mapa {
-		query.Where(fmt.Sprintf("%s=?", key), val)
+	return session.Get(m)
+}
+
+func FindAll(m ModelInterface, query *QueryModel) error {
+	con, err := m.GetConnection()
+	if err != nil {
+		return err
 	}
 
-	return query.Get(m)
+	session := con.NewSession()
+	queryFromModel(session, query)
+
+	return session.Find(m)
+}
+
+func queryFromModel(con *xorm.Session, query *QueryModel) {
+	if query == nil {
+		return
+	}
+
+	if query.Select != "" {
+		con.Select(query.Select)
+	}
+
+	if query.Where != nil {
+		for key, val := range query.Where {
+			con.Where(fmt.Sprintf("%s=?", key), val)
+		}
+	}
+
+	if query.Order != "" {
+		con.OrderBy(query.Order)
+	}
 }
