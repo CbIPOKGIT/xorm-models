@@ -135,7 +135,9 @@ func FindOne(m ModelInterface, query *QueryModel) (bool, error) {
 	}
 
 	session := con.NewSession()
-	queryFromModel(session, query)
+	if query != nil {
+		query.Fill(session)
+	}
 
 	return session.Get(m)
 }
@@ -147,27 +149,9 @@ func FindAll(m ModelInterface, query *QueryModel) error {
 	}
 
 	session := con.NewSession()
-	queryFromModel(session, query)
+	if query != nil {
+		query.Fill(session)
+	}
 
 	return session.Find(m)
-}
-
-func queryFromModel(con *xorm.Session, query *QueryModel) {
-	if query == nil {
-		return
-	}
-
-	if query.Select != "" {
-		con.Select(query.Select)
-	}
-
-	if query.Where != nil {
-		for key, val := range query.Where {
-			con.Where(fmt.Sprintf("%s=?", key), val)
-		}
-	}
-
-	if query.Order != "" {
-		con.OrderBy(query.Order)
-	}
 }
