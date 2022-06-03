@@ -58,7 +58,6 @@ func SaveModel(m ModelInterfaceWithPK) error {
 	if err != nil {
 		return err
 	}
-	// defer con.Close()
 
 	id := m.GetPKValue()
 
@@ -80,7 +79,6 @@ func All(m ModelInterface) error {
 	if err != nil {
 		return err
 	}
-	// defer con.Close()
 
 	if err := con.Find(m); err != nil {
 		return err
@@ -93,7 +91,6 @@ func Find(m ModelInterface, id interface{}) error {
 	if err != nil {
 		return err
 	}
-	// defer con.Close()
 
 	if f, err := con.ID(id).Get(m); err != nil {
 		return err
@@ -112,7 +109,6 @@ func Delete(m ModelInterfaceWithPK) error {
 	if err != nil {
 		return err
 	}
-	// defer con.Close()
 
 	_, err = con.ID(id).Delete(m)
 	return err

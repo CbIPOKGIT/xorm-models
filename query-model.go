@@ -15,7 +15,7 @@ type QueryJoin struct {
 type QueryModel struct {
 	Select  string
 	Selects []string
-	Where   []string
+	Wheres  []string
 	Join    QueryJoin
 	Having  []string
 	GroupBy []string
@@ -27,7 +27,7 @@ type QueryModel struct {
 
 func NewQueryModel() *QueryModel {
 	qm := new(QueryModel)
-	qm.Where = make([]string, 0)
+	qm.Wheres = make([]string, 0)
 	qm.Selects = make([]string, 0)
 	qm.GroupBy = make([]string, 0)
 	qm.Having = make([]string, 0)
@@ -42,7 +42,15 @@ func (qm *QueryModel) OrderByID() {
 	qm.Order = "id ASC"
 }
 
+func (qm *QueryModel) Where(where string) {
+	qm.Wheres = append(qm.Wheres, where)
+}
+
 func (qm QueryModel) Fill(con *xorm.Session) {
+	if qm.Table != "" {
+		con.Table(qm.Table)
+	}
+
 	if qm.Select != "" {
 		qm.Selects = append(qm.Selects, qm.Select)
 	}
@@ -51,8 +59,8 @@ func (qm QueryModel) Fill(con *xorm.Session) {
 		con.Select(strings.Join(qm.Selects, ","))
 	}
 
-	if qm.Where != nil {
-		for _, val := range qm.Where {
+	if qm.Wheres != nil {
+		for _, val := range qm.Wheres {
 			con.Where(val)
 		}
 	}
