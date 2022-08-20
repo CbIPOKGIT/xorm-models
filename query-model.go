@@ -12,11 +12,14 @@ type QueryJoin struct {
 	Condition string
 }
 
+type Joins []QueryJoin
+
 type QueryModel struct {
 	Select  string
 	Selects []string
 	Wheres  []string
 	Join    QueryJoin
+	Joins   Joins
 	Having  []string
 	GroupBy []string
 	Limit   int
@@ -31,6 +34,7 @@ func NewQueryModel() *QueryModel {
 	qm.Selects = make([]string, 0)
 	qm.GroupBy = make([]string, 0)
 	qm.Having = make([]string, 0)
+	qm.Joins = make(Joins, 0)
 	return qm
 }
 
@@ -62,6 +66,12 @@ func (qm QueryModel) Fill(con *xorm.Session) {
 	if qm.Wheres != nil {
 		for _, val := range qm.Wheres {
 			con.Where(val)
+		}
+	}
+
+	for _, join := range qm.Joins {
+		if join.Operator != "" {
+			con.Join(join.Operator, join.Table, join.Condition)
 		}
 	}
 
