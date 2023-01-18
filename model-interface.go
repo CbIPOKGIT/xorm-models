@@ -53,7 +53,7 @@ func getPKValue(m ModelInterface) uint64 {
 	return 0
 }
 
-func SaveModel(m ModelInterfaceWithPK) error {
+func SaveModel(m ModelInterfaceWithPK, withDeleted ...bool) error {
 	con, err := m.GetConnection()
 	if err != nil {
 		return err
@@ -63,7 +63,11 @@ func SaveModel(m ModelInterfaceWithPK) error {
 
 	var errDB error
 	if id != 0 {
-		_, errDB = con.Id(id).UseBool().AllCols().Update(m)
+		query := con.Id(id).UseBool().AllCols()
+		if len(withDeleted) > 0 && withDeleted[0] {
+			query.Unscoped()
+		}
+		_, errDB = query.Update(m)
 	} else {
 		_, errDB = con.InsertOne(m)
 	}
