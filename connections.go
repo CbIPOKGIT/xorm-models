@@ -16,7 +16,7 @@ type Connections struct {
 	ConnectionsList
 }
 
-var connections Connections
+var connections Connections = Connections{}
 
 // Создаем подключение или возвращаем error в случае ошибки
 // Если мы не передаем credentials - используем данные с env файла.
@@ -24,13 +24,15 @@ var connections Connections
 // 1 - пароль / env - {connectionName}_SQL_PASSWORD,
 // 2 - host / env - {connectionName}_SQL_HOST,
 // 3 - имя БД / env - {connectionName}_DATABASE
+//
+// env variable DONT_PING_XORM_CONNECTION - 1 or 0. Ping existed connection or not
 func GetConnection(connectionName string, credentials ...[]string) (*xorm.Engine, error) {
+	connections.Lock()
+	defer connections.Unlock()
+
 	if connections.ConnectionsList == nil {
 		connections.ConnectionsList = make(ConnectionsList)
 	}
-
-	connections.Lock()
-	defer connections.Unlock()
 
 	if connection, has := connections.ConnectionsList[connectionName]; has {
 		if err := connection.Ping(); err == nil {
