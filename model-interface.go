@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 )
 
 // Primary key of each model
@@ -63,7 +63,7 @@ func SaveModel(m ModelInterfaceWithPK, withDeleted ...bool) error {
 
 	var errDB error
 	if id != 0 {
-		query := con.Id(id).UseBool().AllCols()
+		query := con.ID(id).UseBool().AllCols()
 		if len(withDeleted) > 0 && withDeleted[0] {
 			query.Unscoped()
 		}

@@ -3,7 +3,7 @@ package xormmodels
 import (
 	"strings"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 )
 
 type QueryJoin struct {
