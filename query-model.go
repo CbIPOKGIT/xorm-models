@@ -91,5 +91,7 @@ func (qm QueryModel) Fill(con *xorm.Session) {
 		con.OrderBy(qm.Order)
 	}
 
-	con.Limit(qm.Limit, qm.Offset)
+	if qm.Limit > 0 {
+		con.Limit(qm.Limit, qm.Offset)
+	}
 }
