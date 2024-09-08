@@ -1,10 +1,7 @@
 package xormmodels
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
-	"strings"
 	"time"
 
 	"xorm.io/xorm"
@@ -38,19 +35,6 @@ type ModelInterface interface {
 type ModelInterfaceWithPK interface {
 	ModelInterface
 	GetPKValue() uint64
-}
-
-func getPKValue(m ModelInterface) uint64 {
-	ref := reflect.ValueOf(m).Elem()
-
-	for i := 0; i < ref.NumField(); i++ {
-		field := ref.Type().Field(i)
-		val := ref.Field(i).Interface()
-		if strings.ToLower(field.Name) == "id" {
-			return val.(uint64)
-		}
-	}
-	return 0
 }
 
 func SaveModel(m ModelInterfaceWithPK, withDeleted ...bool) error {
@@ -100,7 +84,7 @@ func Find(m ModelInterface, id interface{}) error {
 		return err
 	} else {
 		if !f {
-			return errors.New(fmt.Sprintf("no model with id %d", id))
+			return fmt.Errorf("no model with id %d", id)
 		}
 	}
 	return nil
@@ -126,32 +110,4 @@ func Insert(m ModelInterface) (int64, error) {
 	// defer con.Close()
 
 	return con.Insert(m)
-}
-
-func FindOne(m ModelInterface, query *QueryModel) (bool, error) {
-	con, err := m.GetConnection()
-	if err != nil {
-		return false, err
-	}
-
-	session := con.NewSession()
-	if query != nil {
-		query.Fill(session)
-	}
-
-	return session.Get(m)
-}
-
-func FindAll(m ModelInterface, query *QueryModel) error {
-	con, err := m.GetConnection()
-	if err != nil {
-		return err
-	}
-
-	session := con.NewSession()
-	if query != nil {
-		query.Fill(session)
-	}
-
-	return session.Find(m)
 }
