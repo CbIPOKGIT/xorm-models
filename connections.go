@@ -12,11 +12,15 @@ import (
 type ConnectionsList map[string]*xorm.Engine
 
 type Connections struct {
-	sync.Mutex
+	sync.RWMutex
 	ConnectionsList
 }
 
 var connections Connections = Connections{}
+
+func init() {
+	connections.ConnectionsList = make(ConnectionsList)
+}
 
 // Создаем подключение или возвращаем error в случае ошибки
 // Если мы не передаем credentials - используем данные с env файла.
@@ -27,18 +31,15 @@ var connections Connections = Connections{}
 //
 // env variable DONT_PING_XORM_CONNECTION - 1 or 0. Ping existed connection or not
 func GetConnection(connectionName string, credentials ...[]string) (*xorm.Engine, error) {
-	connections.Lock()
-	defer connections.Unlock()
-
-	if connections.ConnectionsList == nil {
-		connections.ConnectionsList = make(ConnectionsList)
-	}
-
-	if connection, has := connections.ConnectionsList[connectionName]; has {
-		if err := connection.Ping(); err == nil {
-			return connection, nil
+	connnection := getExistingConnection(connectionName)
+	if connnection != nil {
+		if err := connnection.Ping(); err == nil {
+			return connnection, nil
 		}
 	}
+
+	connections.Lock()
+	defer connections.Unlock()
 
 	if connection, err := createConnection(connectionName, credentials...); err == nil {
 		connections.ConnectionsList[connectionName] = connection
@@ -46,6 +47,17 @@ func GetConnection(connectionName string, credentials ...[]string) (*xorm.Engine
 	} else {
 		return nil, err
 	}
+}
+
+func getExistingConnection(connectionName string) *xorm.Engine {
+	connections.RLock()
+	defer connections.RUnlock()
+
+	if connection, has := connections.ConnectionsList[connectionName]; has {
+		return connection
+	}
+
+	return nil
 }
 
 func createConnection(connectionName string, credentials ...[]string) (*xorm.Engine, error) {
