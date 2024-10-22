@@ -24,7 +24,7 @@ type Timestamps struct {
 
 // Soft deletes
 type SoftDeletes struct {
-	DeletedAt SqlNullDate `xorm:"deleted" json:"deleted_at"`
+	DeletedAt *time.Time `xorm:"deleted" json:"deleted_at"`
 }
 
 type ModelInterface interface {
