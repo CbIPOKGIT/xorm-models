@@ -16,21 +16,31 @@ type Connections struct {
 	ConnectionsList
 }
 
+// ConnectionCredentials - структура для передачі даних для підключення.
+//
+// Якщо ми не передаємо credentials - використовуємо дані з env файла по наступному ключу:
+//
+//	логін / env - {connectionName}_SQL_LOGIN,
+//	пароль / env - {connectionName}_SQL_PASSWORD,
+//	host / env - {connectionName}_SQL_HOST,
+//	імя БД / env - {connectionName}_DATABASE
+type ConnectionCredentials struct {
+	Login    string
+	Password string
+	Host     string
+	Database string
+}
+
 var connections Connections = Connections{}
 
 func init() {
 	connections.ConnectionsList = make(ConnectionsList)
 }
 
-// Создаем подключение или возвращаем error в случае ошибки
-// Если мы не передаем credentials - используем данные с env файла.
-// 0 - логин / env - {connectionName}_SQL_LOGIN,
-// 1 - пароль / env - {connectionName}_SQL_PASSWORD,
-// 2 - host / env - {connectionName}_SQL_HOST,
-// 3 - имя БД / env - {connectionName}_DATABASE
+// GetConnection - get connection by name
 //
-// env variable DONT_PING_XORM_CONNECTION - 1 or 0. Ping existed connection or not
-func GetConnection(connectionName string, credentials ...[]string) (*xorm.Engine, error) {
+// Створюємо підключення або повертаємо вже існуюче підключення
+func GetConnection(connectionName string, credentials ...*ConnectionCredentials) (*xorm.Engine, error) {
 	connnection := getExistingConnection(connectionName)
 	if connnection != nil {
 		if err := connnection.Ping(); err == nil {
@@ -38,17 +48,10 @@ func GetConnection(connectionName string, credentials ...[]string) (*xorm.Engine
 		}
 	}
 
-	connections.Lock()
-	defer connections.Unlock()
-
-	if connection, err := createConnection(connectionName, credentials...); err == nil {
-		connections.ConnectionsList[connectionName] = connection
-		return connection, nil
-	} else {
-		return nil, err
-	}
+	return createConnection(connectionName, credentials...)
 }
 
+// getExistingConnection - якщо підключення вже існує - повертаємо його
 func getExistingConnection(connectionName string) *xorm.Engine {
 	connections.RLock()
 	defer connections.RUnlock()
@@ -60,17 +63,24 @@ func getExistingConnection(connectionName string) *xorm.Engine {
 	return nil
 }
 
-func createConnection(connectionName string, credentials ...[]string) (*xorm.Engine, error) {
+// createConnection - створюємо нове підключення та додаємо його в список
+func createConnection(connectionName string, credentials ...*ConnectionCredentials) (*xorm.Engine, error) {
+	connections.Lock()
+	defer connections.Unlock()
+
 	var connectStr string
 
-	if len(credentials) == 4 {
-		connectStr = fmt.Sprintf(
-			"%s:%s@(%s)/%s?charset=utf8&parseTime=True",
-			credentials[0],
-			credentials[1],
-			credentials[2],
-			credentials[3],
-		)
+	if len(credentials) > 0 {
+		for _, credential := range credentials {
+			connectStr = fmt.Sprintf(
+				"%s:%s@(%s)/%s?charset=utf8&parseTime=True",
+				credential.Login,
+				credential.Password,
+				credential.Host,
+				credential.Database,
+			)
+		}
+
 	} else {
 		connectStr = fmt.Sprintf(
 			"%s:%s@(%s)/%s?charset=utf8&parseTime=True",
@@ -87,5 +97,6 @@ func createConnection(connectionName string, credentials ...[]string) (*xorm.Eng
 		return nil, err
 	}
 
+	connections.ConnectionsList[connectionName] = engine
 	return engine, nil
 }
