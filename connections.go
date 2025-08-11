@@ -73,7 +73,7 @@ func createConnection(connectionName string, credentials ...*ConnectionCredentia
 	if len(credentials) > 0 {
 		for _, credential := range credentials {
 			connectStr = fmt.Sprintf(
-				"%s:%s@(%s)/%s?charset=utf8&parseTime=True",
+				"%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True",
 				credential.Login,
 				credential.Password,
 				credential.Host,
@@ -83,7 +83,7 @@ func createConnection(connectionName string, credentials ...*ConnectionCredentia
 
 	} else {
 		connectStr = fmt.Sprintf(
-			"%s:%s@(%s)/%s?charset=utf8&parseTime=True",
+			"%s:%s@(%s)/%s?charset=utf8mb4&parseTime=True",
 			os.Getenv(connectionName+"_SQL_LOGIN"),
 			os.Getenv(connectionName+"_SQL_PASSWORD"),
 			os.Getenv(connectionName+"_SQL_HOST"),
